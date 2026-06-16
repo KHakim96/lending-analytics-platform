@@ -1,0 +1,187 @@
+==================================================
+1. FINAL ARCHITECTURE
+==================================================
+
+CSV + JSON
+     ↓
+Postgres (raw layer)
+     ↓
+Python Extract
+     ↓
+Parquet Files
+     ↓
+Snowflake (raw schema)
+     ↓
+dbt
+     ↓
+Star Schema
+     ↓
+Power BI
+
+==================================================
+2. STEP 0 — CREATE PROJECT FOLDER
+==================================================
+
+mkdir lending_analytics_platform
+cd lending_analytics_platform
+
+Initialize Git:
+git init 
+
+==================================================
+3. Step 1 — Create Complete Folder Structure
+==================================================
+
+mkdir -p \
+data \
+sql \
+docker/airflow \
+docker/postgres \
+docker/python \
+src/bootstrap \
+src/extract \
+src/load \
+src/utils \
+dags/tasks \
+dbt/models/sources \
+dbt/models/staging \
+dbt/models/marts/dimensions \
+dbt/models/marts/facts \
+dbt/tests \
+dbt/macros \
+dbt/snapshots \
+tests/unit \
+tests/integration \
+tests/e2e \
+dashboards/powerbi \
+dashboards/screenshots \
+docs \
+logs \
+.github/workflows
+
+
+==================================================
+4. Step 2 — Create Empty Files
+==================================================
+
+# Root:
+
+touch README.md
+touch requirements.txt
+touch pyproject.toml
+touch .env
+touch .gitignore
+touch docker-compose.yml
+touch AI_LOG.md
+
+# SQL:
+
+touch sql/create_tables.sql
+touch sql/metadata_tables.sql
+
+# Docker:
+
+touch docker/airflow/Dockerfile
+touch docker/postgres/init.sql
+touch docker/python/Dockerfile
+
+# Source:
+
+touch src/bootstrap/load_seed_data.py
+touch src/extract/postgres_to_parquet.py
+touch src/load/snowflake_loader.py
+
+touch src/utils/config.py
+touch src/utils/logger.py
+touch src/utils/helpers.py
+
+# Airflow:
+
+touch dags/lending_pipeline.py
+
+touch dags/tasks/extract_task.py
+touch dags/tasks/load_task.py
+touch dags/tasks/dbt_task.py
+
+# dbt:
+
+touch dbt/dbt_project.yml
+touch dbt/profiles.yml
+
+touch dbt/models/sources/sources.yml
+
+touch dbt/models/staging/stg_loans.sql
+touch dbt/models/staging/stg_payments.sql
+touch dbt/models/staging/schema.yml
+
+touch dbt/models/marts/dimensions/dim_loans.sql
+touch dbt/models/marts/facts/fact_payments.sql
+touch dbt/models/marts/loan_summary.sql
+touch dbt/models/marts/schema.yml
+
+# Dashboard:
+
+touch dashboards/powerbi/lending_dashboard.pbix
+
+# Docs:
+
+touch docs/data_dictionary.md
+touch docs/business_rules.md
+touch docs/runbook.md
+
+# CI:
+
+touch .github/workflows/ci.yml
+
+==================================================
+5. Step 3 — Create Minimal Contents
+==================================================
+
+README.md
+
+# Lending Analytics Platform
+
+End-to-end data engineering project using:
+
+- PostgreSQL
+- Airflow
+- Snowflake
+- dbt
+- Power BI
+- Docker
+
+.gitignore
+
+__pycache__/
+*.pyc
+.env
+
+logs/
+
+.venv/
+venv/
+
+target/
+dbt_packages/
+
+*.parquet
+
+requirements.txt
+
+pandas
+sqlalchemy
+psycopg2-binary
+pyarrow
+snowflake-connector-python
+snowflake-sqlalchemy
+apache-airflow
+dbt-core
+dbt-snowflake
+python-dotenv
+
+==================================================
+6. Step 4 — Commit Skeleton
+==================================================
+
+git add .
+git commit -m "Initial project structure"

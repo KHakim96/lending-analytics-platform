@@ -1,0 +1,89 @@
+Connected to Snowflake
+Loading loans parquet...
+Traceback (most recent call last):
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/connection.py", line 2230, in _process_params_dict
+    res = {k: self._process_single_param(v) for k, v in params.items()}
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/connection.py", line 2230, in <dictcomp>
+    res = {k: self._process_single_param(v) for k, v in params.items()}
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/connection.py", line 2258, in _process_single_param
+    return _quote(escape(to_snowflake(param)))
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/converter.py", line 507, in to_snowflake
+    return getattr(self, f"_{type_name}_to_snowflake")(value)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/converter.py", line 681, in __getattr__
+    raise ProgrammingError(
+snowflake.connector.errors.ProgrammingError: 255001: Binding data in type (dict) is not supported.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1936, in _exec_single_context
+    self.dialect.do_executemany(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 949, in do_executemany
+    cursor.executemany(statement, parameters)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/cursor.py", line 1489, in executemany
+    fmt % self._connection._process_params_pyformat(param, self)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/connection.py", line 2202, in _process_params_pyformat
+    return self._process_params_dict(params)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/connection.py", line 2234, in _process_params_dict
+    Error.errorhandler_wrapper(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/errors.py", line 298, in errorhandler_wrapper
+    handed_over = Error.hand_to_other_handler(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/errors.py", line 361, in hand_to_other_handler
+    connection.errorhandler(connection, cursor, error_class, error_value)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/errors.py", line 229, in default_errorhandler
+    raise error_class(
+snowflake.connector.errors.ProgrammingError: 252004: Failed processing pyformat-parameters: 255001: Binding data in type (dict) is not supported.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/luqman/lending_analytics_platform/src/load/snowflake_loader.py", line 32, in <module>
+    loans.to_sql(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pandas/util/_decorators.py", line 333, in wrapper
+    return func(*args, **kwargs)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pandas/core/generic.py", line 3109, in to_sql
+    return sql.to_sql(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pandas/io/sql.py", line 844, in to_sql
+    return pandas_sql.to_sql(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pandas/io/sql.py", line 2030, in to_sql
+    total_inserted = sql_engine.insert_records(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pandas/io/sql.py", line 1579, in insert_records
+    raise err
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pandas/io/sql.py", line 1570, in insert_records
+    return table.insert(chunksize=chunksize, method=method)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pandas/io/sql.py", line 1121, in insert
+    num_inserted = exec_insert(conn, keys, chunk_iter)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/pandas/io/sql.py", line 1012, in _execute_insert
+    result = conn.execute(self.table.insert(), data)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1936, in _exec_single_context
+    self.dialect.do_executemany(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 949, in do_executemany
+    cursor.executemany(statement, parameters)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/cursor.py", line 1489, in executemany
+    fmt % self._connection._process_params_pyformat(param, self)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/connection.py", line 2202, in _process_params_pyformat
+    return self._process_params_dict(params)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/connection.py", line 2234, in _process_params_dict
+    Error.errorhandler_wrapper(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/errors.py", line 298, in errorhandler_wrapper
+    handed_over = Error.hand_to_other_handler(
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/errors.py", line 361, in hand_to_other_handler
+    connection.errorhandler(connection, cursor, error_class, error_value)
+  File "/Users/luqman/.pyenv/versions/3.10.13/lib/python3.10/site-packages/snowflake/connector/errors.py", line 229, in default_errorhandler
+    raise error_class(
+sqlalchemy.exc.ProgrammingError: (snowflake.connector.errors.ProgrammingError) 252004: Failed processing pyformat-parameters: 255001: Binding data in type (dict) is not supported.
+[SQL: INSERT INTO "RAW"."LOANS" (loan_id, customer_id, product_type, principal_amount, interest_rate, term_months, origination_date, origination_channel, status, borrower_info) VALUES (%(loan_id)s, %(customer_id)s, %(product_type)s, %(principal_amount)s, %(interest_rate)s, %(term_months)s, %(origination_date)s, %(origination_channel)s, %(status)s, %(borrower_info)s)]
+[parameters: [{'loan_id': 'L0009053', 'customer_id': 'C004089', 'product_type': 'PERSONAL', 'principal_amount': '32256.80', 'interest_rate': 10.12, 'term_months': 12, 'origination_date': '2023-05-03', 'origination_channel': 'partner', 'status': 'active', 'borrower_info': {'employment': 'unemployed', 'credit_score': 672.0, 'annual_income': 86827.0, 'years_employed': 2.0}}, {'loan_id': 'L0002253', 'customer_id': 'C000627', 'product_type': 'personal', 'principal_amount': '24315.74', 'interest_rate': 17.82, 'term_months': 60, 'origination_date': '2021-11-16', 'origination_channel': 'branch', 'status': 'closed', 'borrower_info': {'employment': 'unemployed', 'credit_score': 592.0, 'annual_income': 142824.0, 'years_employed': 10.0}}, {'loan_id': 'L0008438', 'customer_id': 'C001653', 'product_type': 'Mortgage', 'principal_amount': '223956.81', 'interest_rate': 3.18, 'term_months': 360, 'origination_date': '11-Dec-2020', 'origination_channel': 'branch', 'status': 'default', 'borrower_info': {'employment': 'salaried', 'credit_score': 605.0, 'annual_income': 118306.0, 'years_employed': 2.0}}, {'loan_id': 'L0009027', 'customer_id': 'C003955', 'product_type': 'STUDENT', 'principal_amount': '38366.86', 'interest_rate': 5.8, 'term_months': 120, 'origination_date': '2023-12-21', 'origination_channel': 'online', 'status': 'default', 'borrower_info': {'employment': 'self-employed', 'credit_score': 717.0, 'annual_income': 127459.0, 'years_employed': 6.0}}, {'loan_id': 'L0008730', 'customer_id': 'C001196', 'product_type': 'PERSONAL', 'principal_amount': '$33,517.74', 'interest_rate': 24.72, 'term_months': 12, 'origination_date': '08/19/2020', 'origination_channel': 'partner', 'status': 'active', 'borrower_info': {'employment': 'salaried', 'credit_score': 652.0, 'annual_income': 215780.0, 'years_employed': 21.0}}, {'loan_id': 'L0007755', 'customer_id': 'C001588', 'product_type': 'Auto', 'principal_amount': '42801.84', 'interest_rate': 13.77, 'term_months': 72, 'origination_date': '2020-08-04', 'origination_channel': 'broker', 'status': 'default', 'borrower_info': {'employment': 'unemployed', 'credit_score': 817.0, 'annual_income': 111356.0, 'years_employed': 11.0}}, {'loan_id': 'L0008041', 'customer_id': 'C001016', 'product_type': 'Personal', 'principal_amount': '15,451.43', 'interest_rate': 7.8, 'term_months': 36, 'origination_date': '2020-01-18', 'origination_channel': 'partner', 'status': 'active', 'borrower_info': {'employment': 'retired', 'credit_score': 632.0, 'annual_income': 298061.0, 'years_employed': 28.0}}, {'loan_id': 'L0003483', 'customer_id': 'C002696', 'product_type': 'AUTO', 'principal_amount': '24032.56', 'interest_rate': 9.71, 'term_months': 48, 'origination_date': '2023-03-16', 'origination_channel': 'online', 'status': 'closed', 'borrower_info': {'employment': 'self-employed', 'credit_score': 655.0, 'annual_income': 291576.0, 'years_employed': 27.0}}  ... displaying 10 of 10000 total bound parameter sets ...  {'loan_id': 'L0000348', 'customer_id': 'C005404', 'product_type': 'Personal', 'principal_amount': '3815.21', 'interest_rate': 14.04, 'term_months': 12, 'origination_date': '2022-04-21', 'origination_channel': 'partner', 'status': 'active', 'borrower_info': {'employment': 'self-employed', 'credit_score': 616.0, 'annual_income': 182401.0, 'years_employed': 13.0}}, {'loan_id': 'L0006218', 'customer_id': 'C003065', 'product_type': 'mortgage', 'principal_amount': '149934.49', 'interest_rate': 3.09, 'term_months': 360, 'origination_date': '2021-02-06', 'origination_channel': 'partner', 'status': 'default', 'borrower_info': {'employment': 'unemployed', 'credit_score': 651.0, 'annual_income': 202742.0, 'years_employed': 14.0}}]]
+(Background on this error at: https://sqlalche.me/e/20/f405)

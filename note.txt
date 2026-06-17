@@ -19,6 +19,10 @@ Star Schema
 Power BI
 
 ==================================================
+PHASE 1
+==================================================
+
+==================================================
 2. STEP 0 — CREATE PROJECT FOLDER
 ==================================================
 
@@ -185,3 +189,180 @@ python-dotenv
 
 git add .
 git commit -m "Initial project structure"
+
+==================================================
+PHASE 2
+==================================================
+
+Goal:
+
+Mac
+  ↓
+Docker
+  ↓
+PostgreSQL Container
+  ↓
+localhost:5432
+
+==================================================
+1. Step 2.1 — Install Docker Desktop
+==================================================
+
+docker --version
+docker compose version
+
+==================================================
+2. Step 2.2 — Create .env
+==================================================
+
+.env
+
+add:
+
+POSTGRES_DB=lending_db
+POSTGRES_USER=lending_user
+POSTGRES_PASSWORD=lending_password
+
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+
+
+==================================================
+3. Step 2.3 — Create docker-compose.yml
+==================================================
+
+services:
+
+  postgres:
+    image: postgres:16
+
+    container_name: lending_postgres
+
+    restart: always
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  postgres_data:
+
+==================================================
+4. Step 2.4 — Create Postgres Init Script
+==================================================
+
+Open:
+
+docker/postgres/init.sql
+
+Put:
+
+SELECT 'Postgres initialized';
+
+Just a test.
+
+==================================================
+5. Step 2.5 — Start Container
+==================================================
+
+From project root:
+
+docker compose up -d
+
+==================================================
+PHASE 3
+==================================================
+
+Goal:
+
+lending_db
+│
+├── loans
+├── payments
+└── pipeline_runs
+
+==================================================
+1. Step 3.1 — Create create_tables.sql
+==================================================
+
+Open:
+
+sql/create_tables.sql
+
+Paste this:
+
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS loans;
+
+CREATE TABLE loans (
+    loan_id INTEGER PRIMARY KEY,
+    customer_id VARCHAR(20) NOT NULL,
+    loan_amount NUMERIC(12,2) NOT NULL,
+    interest_rate NUMERIC(5,2) NOT NULL,
+    term_months INTEGER NOT NULL,
+    loan_status VARCHAR(20) NOT NULL,
+    created_date DATE NOT NULL
+);
+
+CREATE TABLE payments (
+    payment_id INTEGER PRIMARY KEY,
+    loan_id INTEGER NOT NULL,
+    amount NUMERIC(12,2) NOT NULL,
+    payment_date DATE NOT NULL,
+
+    CONSTRAINT fk_payment_loan
+        FOREIGN KEY (loan_id)
+        REFERENCES loans(loan_id)
+);
+
+==================================================
+2. Step 3.2 — Create metadata_tables.sql
+==================================================
+
+Open:
+
+sql/metadata_tables.sql
+
+Paste:
+
+DROP TABLE IF EXISTS pipeline_runs;
+
+CREATE TABLE pipeline_runs (
+    run_id SERIAL PRIMARY KEY,
+    process_name VARCHAR(100),
+    status VARCHAR(20),
+    row_count INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+==================================================
+3. Step 3.3 — Execute SQL Files
+==================================================
+
+You are currently in:
+
+lending_analytics_platform/
+
+Run:
+
+docker exec -i lending_postgres \
+psql -U lending_user -d lending_db \
+< sql/create_tables.sql
+
+You should see something similar:
+
+DROP TABLE
+DROP TABLE
+CREATE TABLE
+CREATE TABLE

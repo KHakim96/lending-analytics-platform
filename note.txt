@@ -366,3 +366,430 @@ DROP TABLE
 DROP TABLE
 CREATE TABLE
 CREATE TABLE
+
+Run:
+
+docker exec -i lending_postgres \
+psql -U lending_user -d lending_db \
+< sql/metadata_tables.sql
+
+Expected:
+
+DROP TABLE
+CREATE TABLE
+
+==================================================
+4. Step 3.4 — Verify Tables Exist
+==================================================
+
+Connect:
+
+docker exec -it lending_postgres \
+psql -U lending_user -d lending_db
+
+Inside psql:
+
+\dt
+
+Expected:
+
+public | loans
+public | payments
+public | pipeline_runs
+
+==================================================
+5. Step 3.8 — Test Metadata Table
+==================================================
+
+Insert a test record:
+
+INSERT INTO pipeline_runs
+(process_name, status, row_count)
+VALUES
+('manual_test', 'SUCCESS', 100);
+
+Verify:
+
+SELECT * FROM pipeline_runs;
+
+Expected:
+
+1 | manual_test | SUCCESS | 100 | ...
+
+==================================================
+6. Step 3.9 — Exit
+==================================================
+
+\q
+
+==================================================
+7. Step 3.10 — Commit
+==================================================
+
+git add .
+git commit -m "Create lending database schema"
+git push
+
+==================================================
+8. Definition of Done
+==================================================
+✅ loans table exists
+✅ payments table exists
+✅ pipeline_runs table exists
+✅ foreign key works
+✅ metadata table tested
+✅ code pushed to GitHub
+
+
+==================================================
+PHASE 4
+==================================================
+
+paste data in data Files
+
+==================================================
+PHASE 5 
+==================================================
+
+Build Seed Loader
+
+Goal:
+
+loans.csv
+payments.jsonl
+        ↓
+load_seed_data.py
+        ↓
+Postgres
+        ↓
+loans table
+payments table
+
+==================================================
+First check columns
+==================================================
+
+Run:
+
+python - <<EOF
+import pandas as pd
+
+df = pd.read_csv("data/loans.csv")
+print(df.columns.tolist())
+print(df.head())
+EOF
+
+Then:
+
+python - <<EOF
+import pandas as pd
+
+df = pd.read_json(
+    "data/payments.jsonl",
+    lines=True
+)
+
+print(df.columns.tolist())
+print(df.head())
+EOF
+
+==================================================
+We Need To Fix Phase 3
+==================================================
+
+Before Phase 5
+
+We should rebuild the tables to match the actual source files.
+
+Otherwise your loader will fail.
+
+==================================================
+New Loans Table
+==================================================
+
+DROP TABLE IF EXISTS loans;
+
+CREATE TABLE loans (
+    loan_id VARCHAR(20) PRIMARY KEY,
+    customer_id VARCHAR(20),
+    product_type VARCHAR(50),
+    principal_amount TEXT,
+    interest_rate NUMERIC(10,2),
+    term_months INTEGER,
+    origination_date TEXT,
+    origination_channel VARCHAR(50),
+    status VARCHAR(50),
+    borrower_info JSONB
+);
+
+==================================================
+New payments Table
+==================================================
+
+DROP TABLE IF EXISTS payments;
+
+CREATE TABLE payments (
+    payment_id VARCHAR(20) PRIMARY KEY,
+    loan_id VARCHAR(20),
+    amount NUMERIC(12,2),
+    timestamp TEXT,
+    payment_method JSONB,
+    metadata JSONB
+);
+
+
+===============================================================================
+need to change in postgres to not only in sql/create_tables.sql cuz :
+===============================================================================
+schema.sql      = house plan
+Postgres DB     = actual house
+
+Change house plan
+        ≠
+House rebuilt
+
+Builder must rebuild house
+        ↓
+Run SQL script
+
+so:
+Editing .sql file = prepare changes
+Executing .sql file = apply changes
+
+==================================================
+Phase 5
+==================================================
+
+==================================================
+Load Source Data into PostgreSQL.
+==================================================
+
+Goal:
+loans.csv
+payments.jsonl
+        ↓
+load_seed_data.py
+        ↓
+Postgres
+        ↓
+loans table
+payments table
+
+
+==================================================
+1. Step 5.1 — Install Dependencies
+==================================================
+
+Update requirements.txt:
+
+pandas
+sqlalchemy
+psycopg2-binary
+python-dotenv
+
+Install:
+
+pip install -r requirements.txt
+
+Verify:
+
+pip list | grep -E "pandas|sqlalchemy|psycopg2"
+
+==================================================
+Then Phase 5 Starts
+==================================================
+
+Create:
+
+src/bootstrap/load_seed_data.py
+
+with the goal:
+
+loans.csv
+payments.jsonl
+        ↓
+PostgreSQL
+
+
+==================================================
+Phase 6
+==================================================
+
+We're now starting:
+
+Phase 6
+PostgreSQL
+     ↓
+Parquet Files
+
+We'll build:
+
+src/extract/postgres_to_parquet.py
+
+Output:
+
+data/
+├── loans.csv
+├── payments.jsonl
+└── processed/
+    ├── loans.parquet
+    └── payments.parquet
+
+==================================================
+Step 1 — Create Processed Folder
+==================================================
+
+From project root:
+
+mkdir -p data/processed
+
+Verify:
+
+tree data
+
+Should show:
+
+data
+├── loans.csv
+├── payments.jsonl
+└── processed
+
+==================================================
+Step 2 — Build postgres_to_parquet.py
+==================================================
+
+Open:
+
+src/extract/postgres_to_parquet.py
+
+paste:
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+import pandas as pd
+import os
+
+# Load environment variables
+load_dotenv()
+
+DB_USER = os.getenv("POSTGRES_USER")
+DB_PASS = os.getenv("POSTGRES_PASSWORD")
+DB_HOST = os.getenv("POSTGRES_HOST")
+DB_PORT = os.getenv("POSTGRES_PORT")
+DB_NAME = os.getenv("POSTGRES_DB")
+
+# Database connection
+engine = create_engine(
+    f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+
+print("Connected to PostgreSQL")
+
+# Extract loans
+print("Extracting loans table...")
+
+loans = pd.read_sql(
+    "SELECT * FROM loans",
+    engine
+)
+
+loans.to_parquet(
+    "data/processed/loans.parquet",
+    index=False
+)
+
+print(f"Exported {len(loans)} loans")
+
+# Extract payments
+print("Extracting payments table...")
+
+payments = pd.read_sql(
+    "SELECT * FROM payments",
+    engine
+)
+
+payments.to_parquet(
+    "data/processed/payments.parquet",
+    index=False
+)
+
+print(f"Exported {len(payments)} payments")
+
+print("Parquet extraction complete")
+
+==================================================
+Step 3 — Run
+==================================================
+
+python src/extract/postgres_to_parquet.py
+
+Expected:
+
+Connected to PostgreSQL
+
+Extracting loans table...
+Exported 10000 loans
+
+Extracting payments table...
+Exported 74756 payments
+
+Parquet extraction complete
+
+==================================================
+Step 4 — Verify Files
+==================================================
+
+Run:
+
+ls -lh data/processed
+
+Expected:
+
+loans.parquet
+payments.parquet
+
+with non-zero file sizes.
+
+==================================================
+Step 5 — Verify Parquet
+==================================================
+
+Run:
+
+python - <<EOF
+import pandas as pd
+
+loans = pd.read_parquet("data/processed/loans.parquet")
+payments = pd.read_parquet("data/processed/payments.parquet")
+
+print("Loans:", len(loans))
+print("Payments:", len(payments))
+EOF
+
+Expected:
+
+Loans: 10000
+Payments: 74756
+
+==================================================
+Step 6 — Commit
+==================================================
+
+If everything works:
+
+git add .
+git commit -m "Build PostgreSQL to Parquet extraction"
+git push
+
+Phase Progress
+✅ Phase 1 - Project Structure
+✅ Phase 2 - Docker
+✅ Phase 3 - Schema
+✅ Phase 4 - Source Data
+✅ Phase 5 - Seed Loader
+🟨 Phase 6 - Postgres → Parquet
+⬜ Phase 7 - Snowflake Setup
+⬜ Phase 8 - Snowflake Loader
+⬜ Phase 9 - dbt
+⬜ Phase 10 - Airflow
+⬜ Phase 11 - Power BI
+⬜ Phase 12 - Tests + Docs + CI/CD

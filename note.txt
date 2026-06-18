@@ -2787,3 +2787,435 @@ dbt_test
 Objective:
 
 Build and deploy the first production-ready orchestration workflow.
+
+==================================================
+PHASE 13B - AIRFLOW ORCHESTRATION
+==================================================
+
+
+## Objective
+
+Automate the entire data pipeline using Apache Airflow.
+
+The goal of this phase is to replace manual execution with a scheduled and orchestrated workflow that executes all pipeline components in the correct sequence.
+
+## Pipeline Architecture
+
+CSV + JSON
+↓
+PostgreSQL
+↓
+Parquet
+↓
+Snowflake
+↓
+dbt Models
+↓
+dbt Tests
+↓
+Airflow Orchestration
+
+## Target Workflow
+
+load_seed_data
+↓
+extract_parquet
+↓
+load_snowflake
+↓
+dbt_run
+↓
+dbt_test
+
+## Step 1 — Create Airflow Docker Image
+
+Created:
+
+docker/airflow/Dockerfile
+
+Purpose:
+
+Build a custom Airflow image capable of executing:
+
+* Python ETL scripts
+* Snowflake loads
+* dbt commands
+
+Installed dependencies:
+
+* pandas
+* sqlalchemy
+* psycopg2
+* pyarrow
+* snowflake-connector-python
+* snowflake-sqlalchemy
+* dbt-core
+* dbt-snowflake
+
+Result:
+
+Airflow containers can execute all project components.
+
+## Step 2 — Configure Docker Compose
+
+Updated:
+
+docker-compose.yml
+
+Added services:
+
+* airflow-init
+* airflow-webserver
+* airflow-scheduler
+
+Added volumes:
+
+* postgres_data
+* airflow_data
+
+Purpose:
+
+Provide:
+
+* Airflow metadata storage
+* DAG execution environment
+* Airflow web interface
+
+Result:
+
+Airflow infrastructure successfully deployed using Docker.
+
+## Step 3 — Initialize Airflow
+
+Created initialization service:
+
+airflow-init
+
+Executed:
+
+airflow db migrate
+
+airflow users create
+
+Administrator account:
+
+Username:
+admin
+
+Password:
+admin
+
+Result:
+
+Airflow metadata database initialized successfully.
+
+## Step 4 — Verify Airflow UI
+
+Started services:
+
+docker compose up -d
+
+Accessed:
+
+http://localhost:8080
+
+Logged in successfully.
+
+Result:
+
+Airflow environment operational.
+
+## Step 5 — Create DAG
+
+Created:
+
+dags/lending_pipeline.py
+
+DAG Name:
+
+lending_pipeline
+
+Purpose:
+
+Orchestrate all pipeline components.
+
+Task Sequence:
+
+load_seed_data
+↓
+extract_parquet
+↓
+load_snowflake
+↓
+dbt_run
+↓
+dbt_test
+
+Result:
+
+Pipeline execution became fully automated.
+
+## Step 6 — Create Airflow Tasks
+
+Task 1:
+
+load_seed_data
+
+Command:
+
+python src/bootstrap/load_seed_data.py
+
+Purpose:
+
+Load source files into PostgreSQL.
+
+Task 2:
+
+extract_parquet
+
+Command:
+
+python src/extract/postgres_to_parquet.py
+
+Purpose:
+
+Extract PostgreSQL tables and create Parquet files.
+
+Task 3:
+
+load_snowflake
+
+Command:
+
+python src/load/snowflake_loader.py
+
+Purpose:
+
+Load Parquet files into Snowflake.
+
+Task 4:
+
+dbt_run
+
+Command:
+
+dbt run --profiles-dir /opt/airflow/project/dbt/profiles
+
+Purpose:
+
+Build staging and mart models.
+
+Task 5:
+
+dbt_test
+
+Command:
+
+dbt test --profiles-dir /opt/airflow/project/dbt/profiles
+
+Purpose:
+
+Execute data quality tests.
+
+## Step 7 — Configure dbt for Airflow
+
+Problem:
+
+Airflow container could not locate:
+
+~/.dbt/profiles.yml
+
+Error:
+
+Path '/home/airflow/.dbt' does not exist
+
+Solution:
+
+Created:
+
+dbt/profiles/profiles.yml
+
+Updated DAG commands:
+
+dbt run --profiles-dir /opt/airflow/project/dbt/profiles
+
+dbt test --profiles-dir /opt/airflow/project/dbt/profiles
+
+Result:
+
+dbt executed successfully inside Airflow containers.
+
+## Step 8 — Resolve Snowflake Duplication Issue
+
+Problem:
+
+Each DAG execution inserted duplicate records into Snowflake.
+
+Observed:
+
+RAW.LOANS
+
+Total Rows:
+20,000
+
+Distinct Loan IDs:
+10,000
+
+RAW.PAYMENTS
+
+Total Rows:
+149,512
+
+Distinct Payment IDs:
+74,756
+
+Cause:
+
+snowflake_loader.py used:
+
+if_exists="append"
+
+Resulting in duplicate records after multiple DAG runs.
+
+Solution:
+
+Added:
+
+from sqlalchemy import text
+
+with engine.begin() as conn:
+conn.execute(text("TRUNCATE TABLE RAW.LOANS"))
+conn.execute(text("TRUNCATE TABLE RAW.PAYMENTS"))
+
+before loading data.
+
+Result:
+
+Each DAG run now reloads a clean dataset.
+
+## Step 9 — Execute Full Pipeline
+
+Triggered DAG from Airflow UI.
+
+Execution Flow:
+
+load_seed_data
+↓
+extract_parquet
+↓
+load_snowflake
+↓
+dbt_run
+↓
+dbt_test
+
+Result:
+
+All tasks executed successfully.
+
+## Step 10 — Validate Pipeline
+
+Verified:
+
+✓ PostgreSQL load
+
+✓ Parquet generation
+
+✓ Snowflake load
+
+✓ dbt staging models
+
+✓ dbt mart models
+
+✓ dbt tests
+
+✓ Airflow orchestration
+
+## Final Architecture
+
+Source Files
+
+loans.csv
+payments.jsonl
+
+```
+    ↓
+```
+
+PostgreSQL
+
+```
+    ↓
+```
+
+Parquet Layer
+
+loans.parquet
+payments.parquet
+
+```
+    ↓
+```
+
+Snowflake RAW Layer
+
+RAW.LOANS
+RAW.PAYMENTS
+
+```
+    ↓
+```
+
+dbt Staging Layer
+
+stg_loans
+stg_payments
+
+```
+    ↓
+```
+
+dbt Mart Layer
+
+dim_customer
+dim_product
+fact_loans
+fact_payments
+
+```
+    ↓
+```
+
+dbt Tests
+
+```
+    ↓
+```
+
+Airflow DAG
+
+## Project Deliverables
+
+✓ PostgreSQL ingestion layer
+
+✓ Parquet extraction layer
+
+✓ Snowflake data warehouse
+
+✓ dbt transformation layer
+
+✓ dbt testing framework
+
+✓ Airflow orchestration layer
+
+✓ Dockerized deployment
+
+✓ End-to-end automated data pipeline
+
+## Phase Status
+
+PHASE 13 COMPLETE
+
+Outcome:
+
+A production-style data engineering pipeline was successfully built and automated using PostgreSQL, Parquet, Snowflake, dbt, Docker, and Apache Airflow.

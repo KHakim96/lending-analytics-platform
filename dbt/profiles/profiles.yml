@@ -1,0 +1,14 @@
+lending_analytics:
+  outputs:
+    dev:
+      account: jh60333.ap-southeast-5.aws
+      database: LENDING_DB
+      password: Luqman0199066083
+      role: ACCOUNTADMIN
+      schema: RAW
+      threads: 4
+      type: snowflake
+      user: Khakim96
+      warehouse: LENDING_WH
+
+  target: dev

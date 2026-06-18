@@ -1,0 +1,53 @@
+version: 2
+
+models:
+
+  - name: dim_product
+    columns:
+      - name: product_type
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_customer
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+
+  - name: fact_loans
+    columns:
+      - name: loan_id
+        tests:
+          - not_null
+          - unique
+
+      # - name: customer_id
+      #   tests:
+      #     - not_null
+
+      - name: product_type
+        tests:
+          - not_null
+
+      - name: status
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - active
+                  - closed
+                  - default
+                  - charged_off
+
+  - name: fact_payments
+    columns:
+      - name: payment_id
+        tests:
+          - not_null
+          - unique
+
+      - name: loan_id
+        tests:
+          - not_null

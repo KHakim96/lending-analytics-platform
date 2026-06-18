@@ -793,3 +793,1997 @@ Phase Progress
 ⬜ Phase 10 - Airflow
 ⬜ Phase 11 - Power BI
 ⬜ Phase 12 - Tests + Docs + CI/CD
+
+==================================================
+Phase 7 — Snowflake Environment Setup
+==================================================
+
+Objective
+---------
+Prepare the Snowflake environment that will be used as the cloud data warehouse for the lending analytics platform.
+
+Architecture
+------------
+PostgreSQL
+      ↓
+Parquet Files
+      ↓
+Snowflake RAW Layer
+
+Prerequisites
+-------------
+✅ Phase 1 - Project Structure
+✅ Phase 2 - Docker Setup
+✅ Phase 3 - PostgreSQL Schema
+✅ Phase 4 - Source Data
+✅ Phase 5 - Seed Loader
+✅ Phase 6 - PostgreSQL to Parquet
+
+Step 1 - Create Snowflake Account
+---------------------------------
+Created Snowflake Trial Account
+
+Snowflake URL:
+https://app.snowflake.com/ap-southeast-5.aws/jh60333
+
+Account Locator:
+jh60333
+
+Region:
+ap-southeast-5.aws
+
+Cloud Provider:
+AWS
+
+Step 2 - Create Warehouse
+-------------------------
+Purpose:
+Provide compute resources for queries and data loading.
+
+SQL:
+
+CREATE WAREHOUSE LENDING_WH
+WITH WAREHOUSE_SIZE = 'XSMALL'
+AUTO_SUSPEND = 60
+AUTO_RESUME = TRUE;
+
+Verification:
+
+SHOW WAREHOUSES;
+
+Result:
+✅ LENDING_WH created successfully
+
+Step 3 - Create Database
+------------------------
+Purpose:
+Store all lending analytics data.
+
+SQL:
+
+CREATE DATABASE LENDING_DB;
+
+Verification:
+
+SHOW DATABASES;
+
+Result:
+✅ LENDING_DB created successfully
+
+Step 4 - Create RAW Schema
+--------------------------
+Purpose:
+Store raw data loaded from Parquet files.
+
+SQL:
+
+USE DATABASE LENDING_DB;
+
+CREATE SCHEMA RAW;
+
+Verification:
+
+SHOW SCHEMAS;
+
+Result:
+✅ RAW schema created successfully
+
+Snowflake Objects Created
+-------------------------
+Warehouse:
+LENDING_WH
+
+Database:
+LENDING_DB
+
+Schema:
+RAW
+
+Environment Variables Added
+---------------------------
+SNOWFLAKE_ACCOUNT=jh60333.ap-southeast-5.aws
+SNOWFLAKE_USER=<username>
+SNOWFLAKE_PASSWORD=<password>
+
+SNOWFLAKE_WAREHOUSE=LENDING_WH
+SNOWFLAKE_DATABASE=LENDING_DB
+SNOWFLAKE_SCHEMA=RAW
+
+Validation
+----------
+SHOW WAREHOUSES;
+SHOW DATABASES;
+SHOW SCHEMAS;
+
+Results:
+✅ Warehouse exists
+✅ Database exists
+✅ Schema exists
+✅ Snowflake account accessible
+
+Deliverables
+------------
+✅ Snowflake account created
+✅ Warehouse configured
+✅ Database created
+✅ RAW schema created
+✅ Environment variables prepared
+
+Phase 7 Status
+--------------
+✅ COMPLETE
+
+Final Architecture
+------------------
+loans.csv
+payments.jsonl
+        ↓
+PostgreSQL
+        ↓
+Parquet Files
+        ↓
+Snowflake RAW Layer
+
+Next Phase
+----------
+Phase 8 - Snowflake Loader
+
+Goal:
+
+Parquet Files
+      ↓
+snowflake_loader.py
+      ↓
+Snowflake RAW Schema
+
+
+==================================================
+PHASE 8 — LOAD PARQUET FILES INTO SNOWFLAKE
+==================================================
+
+Objective
+---------
+Load Parquet files generated from PostgreSQL into Snowflake RAW layer.
+
+Architecture
+------------
+loans.csv
+payments.jsonl
+        ↓
+PostgreSQL
+        ↓
+Parquet Files
+        ↓
+Snowflake RAW Layer
+
+Prerequisites
+-------------
+✅ Phase 1 - Project Structure
+✅ Phase 2 - Docker Setup
+✅ Phase 3 - PostgreSQL Schema
+✅ Phase 4 - Source Data
+✅ Phase 5 - Seed Loader
+✅ Phase 6 - PostgreSQL to Parquet
+✅ Phase 7 - Snowflake Setup
+
+Input Files
+-----------
+data/processed/loans.parquet
+data/processed/payments.parquet
+
+Snowflake Objects
+-----------------
+Warehouse:
+LENDING_WH
+
+Database:
+LENDING_DB
+
+Schema:
+RAW
+
+Environment Variables
+---------------------
+SNOWFLAKE_ACCOUNT=jh60333.ap-southeast-5.aws
+SNOWFLAKE_USER=<username>
+SNOWFLAKE_PASSWORD=<password>
+
+SNOWFLAKE_WAREHOUSE=LENDING_WH
+SNOWFLAKE_DATABASE=LENDING_DB
+SNOWFLAKE_SCHEMA=RAW
+
+Step 1 - Test Snowflake Connection
+----------------------------------
+Created:
+
+test_snowflake.py
+
+Purpose:
+Verify Python can connect to Snowflake.
+
+Command:
+
+python test_snowflake.py
+
+Result:
+
+Snowflake connection successful
+
+Step 2 - Create Raw Tables
+--------------------------
+Created LOANS table:
+
+CREATE OR REPLACE TABLE LOANS (
+    LOAN_ID STRING,
+    CUSTOMER_ID STRING,
+    PRODUCT_TYPE STRING,
+    PRINCIPAL_AMOUNT STRING,
+    INTEREST_RATE FLOAT,
+    TERM_MONTHS INTEGER,
+    ORIGINATION_DATE STRING,
+    ORIGINATION_CHANNEL STRING,
+    STATUS STRING,
+    BORROWER_INFO VARIANT
+);
+
+Created PAYMENTS table:
+
+CREATE OR REPLACE TABLE PAYMENTS (
+    PAYMENT_ID STRING,
+    LOAN_ID STRING,
+    AMOUNT FLOAT,
+    TIMESTAMP STRING,
+    PAYMENT_METHOD STRING,
+    METADATA STRING
+);
+
+Verification:
+
+SHOW TABLES;
+
+Result:
+
+✅ LOANS
+✅ PAYMENTS
+
+Step 3 - Build Snowflake Loader
+-------------------------------
+Created:
+
+src/load/snowflake_loader.py
+
+Purpose:
+
+Read parquet files
+Connect to Snowflake
+Load data into RAW tables
+
+Libraries Used
+--------------
+pandas
+sqlalchemy
+snowflake-sqlalchemy
+snowflake-connector-python
+python-dotenv
+json
+
+Step 4 - Handle JSON Columns
+----------------------------
+Issue Encountered:
+
+Snowflake does not support inserting Python dictionaries directly.
+
+Error:
+
+Binding data in type (dict) is not supported.
+
+Solution:
+
+Converted JSON columns to strings.
+
+Loans:
+
+borrower_info
+
+Payments:
+
+payment_method
+metadata
+
+Code Used:
+
+import json
+
+loans["borrower_info"] = loans["borrower_info"].apply(
+    lambda x: json.dumps(x) if pd.notna(x) else None
+)
+
+payments["payment_method"] = payments["payment_method"].apply(
+    lambda x: json.dumps(x) if pd.notna(x) else None
+)
+
+payments["metadata"] = payments["metadata"].apply(
+    lambda x: json.dumps(x) if pd.notna(x) else None
+)
+
+Step 5 - Load Loans Data
+------------------------
+Source:
+
+data/processed/loans.parquet
+
+Rows:
+
+10000
+
+Command:
+
+python src/load/snowflake_loader.py
+
+Result:
+
+Loaded 10000 loans
+
+Step 6 - Load Payments Data
+---------------------------
+Source:
+
+data/processed/payments.parquet
+
+Rows:
+
+74756
+
+Issue Encountered:
+
+PAYMENT_METHOD column expected VARIANT but received VARCHAR.
+
+Solution:
+
+Changed Snowflake table definition:
+
+PAYMENT_METHOD STRING
+METADATA STRING
+
+Re-ran loader.
+
+Result:
+
+Loaded 74756 payments
+
+Step 7 - Validate Data
+----------------------
+SQL:
+
+SELECT COUNT(*) FROM LOANS;
+
+SELECT COUNT(*) FROM PAYMENTS;
+
+Expected Result:
+
+LOANS:
+10000
+
+PAYMENTS:
+74756
+
+Execution Output
+----------------
+Connected to Snowflake
+
+Loading loans parquet...
+Loaded 10000 loans
+
+Loading payments parquet...
+Loaded 74756 payments
+
+Snowflake load complete
+
+Deliverables
+------------
+✅ Snowflake connection established
+
+✅ LOANS table created
+
+✅ PAYMENTS table created
+
+✅ loans.parquet loaded
+
+✅ payments.parquet loaded
+
+✅ JSON fields handled
+
+✅ Data validated
+
+Phase 8 Status
+--------------
+✅ COMPLETE
+
+Final Architecture
+------------------
+loans.csv
+payments.jsonl
+        ↓
+PostgreSQL
+        ↓
+Parquet Files
+        ↓
+Snowflake RAW Layer
+
+Data Loaded
+-----------
+LOANS:
+10000 rows
+
+PAYMENTS:
+74756 rows
+
+Next Phase
+----------
+Phase 9 - dbt Setup
+
+Snowflake RAW
+      ↓
+dbt
+      ↓
+Staging Models
+      ↓
+Star Schema
+      ↓
+Power BI
+
+==================================================
+PHASE 10 — DBT STAGING MODELS
+==================================================
+
+
+## Objective
+
+Create staging models in dbt to clean, standardize, and prepare raw Snowflake data for dimensional modeling.
+
+## Architecture
+
+RAW.LOANS
+↓
+STG_LOANS
+
+RAW.PAYMENTS
+↓
+STG_PAYMENTS
+
+## Purpose
+
+The RAW layer stores data exactly as received from source systems.
+
+The STAGING layer performs:
+
+* Data standardization
+* Data type conversion
+* Data cleansing
+* Column normalization
+
+This layer becomes the foundation for marts and star schema models.
+
+## Prerequisites
+
+✅ Phase 7 - Snowflake Setup
+
+✅ Phase 8 - Snowflake Raw Data Load
+
+✅ Phase 9 - dbt Setup
+
+## Raw Tables Available
+
+RAW.LOANS
+
+Columns:
+
+* loan_id
+* customer_id
+* product_type
+* principal_amount
+* interest_rate
+* term_months
+* origination_date
+* origination_channel
+* status
+* borrower_info
+
+RAW.PAYMENTS
+
+Columns:
+
+* payment_id
+* loan_id
+* amount
+* timestamp
+* payment_method
+* metadata
+
+## Step 1 - Remove Default dbt Example Models
+
+dbt automatically creates sample models during initialization.
+
+Removed:
+
+models/example/
+
+Files removed:
+
+* my_first_dbt_model.sql
+* my_second_dbt_model.sql
+* schema.yml
+
+Command:
+
+rm -rf models/example
+
+Reason:
+The sample models are not required for the lending analytics project.
+
+## Step 2 - Create Staging Folder Structure
+
+Created:
+
+models/staging/
+models/marts/
+
+Commands:
+
+mkdir -p models/staging
+mkdir -p models/marts
+
+Result:
+
+models/
+├── marts/
+└── staging/
+
+## Step 3 - Create stg_loans.sql
+
+File:
+
+models/staging/stg_loans.sql
+
+Purpose:
+Clean and standardize loan data.
+
+Transformations applied:
+
+1. Standardize Product Type
+
+Examples:
+
+PERSONAL
+Personal
+personal
+
+Converted to:
+
+personal
+
+SQL:
+
+lower(trim(product_type))
+
+2. Clean Principal Amount
+
+Examples:
+
+$33,517.74
+
+Converted to:
+
+33517.74
+
+SQL:
+
+replace(
+replace(principal_amount,'$',''),
+',',''
+)
+
+Converted to numeric using:
+
+try_to_number()
+
+3. Standardize Origination Date
+
+Source data contains multiple formats:
+
+2023-05-03
+11-Dec-2020
+08/19/2020
+
+Converted using:
+
+coalesce(
+try_to_date(...),
+try_to_date(...),
+try_to_date(...)
+)
+
+Result:
+Single DATE format.
+
+4. Standardize Origination Channel
+
+Examples:
+
+ONLINE
+online
+Online
+
+Converted to:
+
+online
+
+SQL:
+
+lower(trim(origination_channel))
+
+5. Standardize Loan Status
+
+Examples:
+
+ACTIVE
+Active
+active
+
+Converted to:
+
+active
+
+SQL:
+
+lower(trim(status))
+
+## Step 4 - Create stg_payments.sql
+
+File:
+
+models/staging/stg_payments.sql
+
+Purpose:
+Prepare payment records for future marts.
+
+Columns retained:
+
+* payment_id
+* loan_id
+* amount
+* timestamp
+* payment_method
+* metadata
+
+At this stage no business transformations were applied.
+
+The model acts as a cleaned pass-through layer.
+
+## Step 5 - Execute dbt Models
+
+Command:
+
+dbt run
+
+Execution Result:
+
+1 of 2 OK created sql view model RAW.stg_loans
+
+2 of 2 OK created sql view model RAW.stg_payments
+
+Final Result:
+
+PASS=2
+WARN=0
+ERROR=0
+
+## Step 6 - Validate Models
+
+dbt successfully created:
+
+RAW.STG_LOANS
+
+RAW.STG_PAYMENTS
+
+Validation:
+
+dbt run completed successfully.
+
+No model failures detected.
+
+## Output Layer
+
+Before:
+
+RAW.LOANS
+RAW.PAYMENTS
+
+After:
+
+RAW.LOANS
+RAW.PAYMENTS
+↓
+STG_LOANS
+STG_PAYMENTS
+
+## Deliverables
+
+✅ models/staging/stg_loans.sql
+
+✅ models/staging/stg_payments.sql
+
+✅ Product type standardization
+
+✅ Principal amount cleansing
+
+✅ Date normalization
+
+✅ Channel normalization
+
+✅ Status normalization
+
+✅ dbt models successfully deployed
+
+## Phase 10 Status
+
+COMPLETE
+
+## Next Phase
+
+Phase 11 — Star Schema Modeling
+
+STG_LOANS
+STG_PAYMENTS
+↓
+DIM_PRODUCT
+DIM_CUSTOMER
+FACT_LOANS
+FACT_PAYMENTS
+
+
+==================================================
+PHASE 11 — STAR SCHEMA MODELING
+==================================================
+
+## Objective
+
+Transform cleaned staging models into analytics-ready dimensional models using a Star Schema design.
+
+The purpose of this phase is to create a reporting layer optimized for:
+
+* Business Intelligence
+* Power BI dashboards
+* KPI reporting
+* Portfolio analysis
+* Payment analysis
+* Product performance analysis
+
+## Architecture Before
+
+RAW.LOANS
+RAW.PAYMENTS
+↓
+STG_LOANS
+STG_PAYMENTS
+
+## Architecture After
+
+```
+            DIM_PRODUCT
+                 |
+                 |
+```
+
+DIM_CUSTOMER ---- FACT_LOANS
+|
+|
+FACT_PAYMENTS
+
+## Purpose
+
+The staging layer cleans and standardizes raw data.
+
+The mart layer organizes data into:
+
+## Dimensions
+
+Descriptive entities.
+
+Examples:
+
+* Product
+* Customer
+
+## Facts
+
+Business events and measurable metrics.
+
+Examples:
+
+* Loans
+* Payments
+
+This design simplifies reporting and improves query performance.
+
+## Prerequisites
+
+✅ Phase 10 - Staging Models
+
+## Source Models
+
+STG_LOANS
+
+Columns:
+
+* loan_id
+* customer_id
+* product_type
+* principal_amount
+* interest_rate
+* term_months
+* origination_date
+* origination_channel
+* status
+* borrower_info
+
+STG_PAYMENTS
+
+Columns:
+
+* payment_id
+* loan_id
+* amount
+* timestamp
+* payment_method
+* metadata
+
+## Step 1 - Create Mart Layer Files
+
+Created:
+
+models/marts/dim_product.sql
+
+models/marts/dim_customer.sql
+
+models/marts/fact_loans.sql
+
+models/marts/fact_payments.sql
+
+Commands:
+
+touch models/marts/dim_product.sql
+
+touch models/marts/dim_customer.sql
+
+touch models/marts/fact_loans.sql
+
+touch models/marts/fact_payments.sql
+
+Resulting Structure:
+
+models/
+├── marts
+│   ├── dim_product.sql
+│   ├── dim_customer.sql
+│   ├── fact_loans.sql
+│   └── fact_payments.sql
+│
+└── staging
+├── stg_loans.sql
+└── stg_payments.sql
+
+## Step 2 - Build Product Dimension
+
+File:
+
+models/marts/dim_product.sql
+
+Purpose:
+
+Create a unique list of loan products.
+
+Business Examples:
+
+personal
+mortgage
+auto
+student
+
+SQL:
+
+select distinct
+
+```
+product_type
+```
+
+from {{ ref('stg_loans') }}
+
+where product_type is not null
+
+Output:
+
+DIM_PRODUCT
+
+Columns:
+
+* product_type
+
+Business Use Cases:
+
+* Product distribution analysis
+* Product performance analysis
+* Product default analysis
+
+## Step 3 - Build Customer Dimension
+
+File:
+
+models/marts/dim_customer.sql
+
+Purpose:
+
+Create a unique list of customers.
+
+SQL:
+
+select distinct
+
+```
+customer_id
+```
+
+from {{ ref('stg_loans') }}
+
+where customer_id is not null
+
+Output:
+
+DIM_CUSTOMER
+
+Columns:
+
+* customer_id
+
+Business Use Cases:
+
+* Customer portfolio analysis
+* Customer segmentation
+* Customer loan activity
+
+## Step 4 - Build Loan Fact Table
+
+File:
+
+models/marts/fact_loans.sql
+
+Purpose:
+
+Store loan-level business facts.
+
+Source:
+
+STG_LOANS
+
+SQL:
+
+select
+
+```
+loan_id,
+customer_id,
+product_type,
+
+principal_amount,
+interest_rate,
+term_months,
+
+origination_date,
+origination_channel,
+
+status
+```
+
+from {{ ref('stg_loans') }}
+
+Output:
+
+FACT_LOANS
+
+Grain:
+
+One row = One loan
+
+Columns:
+
+* loan_id
+* customer_id
+* product_type
+* principal_amount
+* interest_rate
+* term_months
+* origination_date
+* origination_channel
+* status
+
+Business Metrics:
+
+* Total loans issued
+* Principal amount
+* Active loans
+* Closed loans
+* Defaulted loans
+* Charged-off loans
+
+Business Use Cases:
+
+* Portfolio analysis
+* Loan growth tracking
+* Product performance analysis
+* Delinquency reporting
+
+## Step 5 - Build Payment Fact Table
+
+File:
+
+models/marts/fact_payments.sql
+
+Purpose:
+
+Store payment transactions.
+
+Source:
+
+STG_PAYMENTS
+
+SQL:
+
+select
+
+```
+payment_id,
+loan_id,
+amount,
+timestamp
+```
+
+from {{ ref('stg_payments') }}
+
+Output:
+
+FACT_PAYMENTS
+
+Grain:
+
+One row = One payment transaction
+
+Columns:
+
+* payment_id
+* loan_id
+* amount
+* timestamp
+
+Business Metrics:
+
+* Total collection amount
+* Payment volume
+* Payment frequency
+* Collection trends
+
+Business Use Cases:
+
+* Collection performance analysis
+* Payment trend analysis
+* Revenue tracking
+
+## Step 6 - Execute dbt Models
+
+Command:
+
+dbt run
+
+Execution Output:
+
+Running with dbt=1.11.11
+
+Found 6 models
+
+STG_LOANS ............ SUCCESS
+
+STG_PAYMENTS ......... SUCCESS
+
+DIM_PRODUCT .......... SUCCESS
+
+DIM_CUSTOMER ......... SUCCESS
+
+FACT_LOANS ........... SUCCESS
+
+FACT_PAYMENTS ........ SUCCESS
+
+PASS=6
+WARN=0
+ERROR=0
+
+Result:
+
+All staging and mart models were successfully deployed to Snowflake.
+
+## Step 7 - Validate Star Schema
+
+Verification Queries:
+
+SELECT COUNT(*) FROM DIM_PRODUCT;
+
+SELECT COUNT(*) FROM DIM_CUSTOMER;
+
+SELECT COUNT(*) FROM FACT_LOANS;
+
+SELECT COUNT(*) FROM FACT_PAYMENTS;
+
+Expected Results:
+
+DIM_PRODUCT
+
+Small set of unique products.
+
+DIM_CUSTOMER
+
+Unique customers.
+
+FACT_LOANS
+
+10000 rows.
+
+FACT_PAYMENTS
+
+74756 rows.
+
+## Final Star Schema
+
+```
+            DIM_PRODUCT
+                 |
+                 |
+```
+
+DIM_CUSTOMER ---- FACT_LOANS
+|
+|
+FACT_PAYMENTS
+
+## Business Questions Supported
+
+Portfolio Analysis
+
+* Total loans issued
+* Total principal amount
+* Active portfolio size
+* Loan status distribution
+
+Product Analysis
+
+* Product distribution
+* Product performance
+* Product default rate
+
+Customer Analysis
+
+* Customer activity
+* Customer exposure
+* Loan ownership
+
+Payment Analysis
+
+* Total payments collected
+* Payment trends
+* Collection effectiveness
+
+## Deliverables
+
+✅ DIM_PRODUCT
+
+✅ DIM_CUSTOMER
+
+✅ FACT_LOANS
+
+✅ FACT_PAYMENTS
+
+✅ Star Schema implemented
+
+✅ Analytics layer created
+
+✅ dbt models deployed successfully
+
+## Phase 11 Status
+
+COMPLETE
+
+## Next Phase
+
+PHASE 12 — DBT DATA QUALITY TESTS
+
+Focus Areas:
+
+* not_null
+* unique
+* accepted_values
+* relationships
+* referential integrity
+* data validation
+
+==================================================
+PHASE 12 — DBT DATA QUALITY TESTING
+==================================================
+
+## Objective
+
+Implement automated data quality tests using dbt to validate the integrity, completeness, and consistency of data within the warehouse.
+
+## Purpose
+
+Data quality tests ensure that business-critical data meets predefined quality standards before being consumed by dashboards, reports, and analytics.
+
+The tests help identify:
+
+* Missing values
+* Duplicate records
+* Invalid business values
+* Data integrity issues
+* Source system data quality problems
+
+## Prerequisites
+
+✅ Phase 11 - Star Schema Modeling
+
+## Models Under Test
+
+DIM_PRODUCT
+
+DIM_CUSTOMER
+
+FACT_LOANS
+
+FACT_PAYMENTS
+
+## Testing Framework
+
+Tool:
+
+dbt test
+
+Test Categories:
+
+* not_null
+* unique
+* accepted_values
+
+## Step 1 - Create Test Configuration
+
+Created file:
+
+models/schema.yml
+
+Purpose:
+
+Define column-level data quality rules for dbt models.
+
+## Step 2 - Configure Product Dimension Tests
+
+Model:
+
+DIM_PRODUCT
+
+Column:
+
+product_type
+
+Tests:
+
+* not_null
+* unique
+
+Validation Rules:
+
+* Every product must have a value
+* Product names must be unique
+
+Business Reason:
+
+Each loan product should exist only once within the dimension table.
+
+## Step 3 - Configure Customer Dimension Tests
+
+Model:
+
+DIM_CUSTOMER
+
+Column:
+
+customer_id
+
+Tests:
+
+* not_null
+* unique
+
+Validation Rules:
+
+* Every customer must have an identifier
+* Customer identifiers must be unique
+
+Business Reason:
+
+Each customer should appear only once within the customer dimension.
+
+## Step 4 - Configure Loan Fact Tests
+
+Model:
+
+FACT_LOANS
+
+Columns Tested:
+
+loan_id
+
+Tests:
+
+* not_null
+* unique
+
+Validation Rules:
+
+* Every loan must have an identifier
+* Loan identifiers must be unique
+
+product_type
+
+Tests:
+
+* not_null
+
+Validation Rule:
+
+* Every loan must be assigned to a product
+
+status
+
+Tests:
+
+* accepted_values
+
+Allowed Values:
+
+* active
+* closed
+* default
+* charged_off
+
+Validation Rule:
+
+Loan status must belong to the approved business status list.
+
+## Step 5 - Configure Payment Fact Tests
+
+Model:
+
+FACT_PAYMENTS
+
+Columns Tested:
+
+payment_id
+
+Tests:
+
+* not_null
+* unique
+
+Validation Rules:
+
+* Every payment must have an identifier
+* Payment identifiers must be unique
+
+loan_id
+
+Tests:
+
+* not_null
+
+Validation Rule:
+
+Every payment must be associated with a loan.
+
+## Step 6 - Execute Data Quality Tests
+
+Command:
+
+dbt test
+
+Execution Summary:
+
+Found 12 data tests.
+
+Executed:
+
+* Product tests
+* Customer tests
+* Loan tests
+* Payment tests
+
+Results:
+
+PASS = 11
+
+ERROR = 1
+
+TOTAL = 12
+
+## Step 7 - Data Quality Issue Detected
+
+Failed Test:
+
+not_null_fact_loans_customer_id
+
+Result:
+
+10 records failed validation.
+
+Issue:
+
+10 loans contained NULL customer_id values.
+
+## Investigation
+
+The issue originated from the source dataset.
+
+The NULL values were already present in:
+
+* loans.csv
+* PostgreSQL
+* Parquet files
+* Snowflake RAW layer
+
+dbt successfully identified and reported the issue.
+
+## Root Cause
+
+Source data quality issue.
+
+The missing customer identifiers were inherited from the original loan dataset.
+
+## Action Taken
+
+No artificial customer identifiers were generated.
+
+The records were retained to preserve source system integrity.
+
+The issue was documented for future business review.
+
+## Business Justification
+
+Data Engineers should not fabricate business identifiers.
+
+The correct approach is:
+
+* Detect the issue
+* Report the issue
+* Monitor the issue
+
+rather than silently modifying source data.
+
+## Step 8 - Accepted Values Validation
+
+Loan status values were validated against the approved business list:
+
+* active
+* closed
+* default
+* charged_off
+
+Result:
+
+PASS
+
+No invalid status values were detected.
+
+## Step 9 - Duplicate Detection Validation
+
+Validated:
+
+DIM_PRODUCT
+
+DIM_CUSTOMER
+
+FACT_LOANS
+
+FACT_PAYMENTS
+
+Result:
+
+PASS
+
+No duplicate primary keys detected.
+
+## Step 10 - Completeness Validation
+
+Validated:
+
+DIM_PRODUCT.product_type
+
+DIM_CUSTOMER.customer_id
+
+FACT_LOANS.loan_id
+
+FACT_LOANS.product_type
+
+FACT_PAYMENTS.payment_id
+
+FACT_PAYMENTS.loan_id
+
+Result:
+
+PASS
+
+One exception:
+
+FACT_LOANS.customer_id
+
+10 NULL values detected.
+
+## Final Test Results
+
+PASS = 11
+
+ERROR = 1
+
+TOTAL = 12
+
+## Data Quality Summary
+
+Successful Tests:
+
+✅ Product uniqueness
+
+✅ Product completeness
+
+✅ Customer uniqueness
+
+✅ Customer completeness
+
+✅ Loan uniqueness
+
+✅ Loan completeness
+
+✅ Product assignment completeness
+
+✅ Payment uniqueness
+
+✅ Payment completeness
+
+✅ Loan status validation
+
+Detected Issue:
+
+⚠ 10 loans contain NULL customer_id values
+
+## Deliverables
+
+✅ models/schema.yml
+
+✅ 12 dbt tests implemented
+
+✅ Automated data quality framework established
+
+✅ Source data issue identified
+
+✅ Data quality findings documented
+
+## Phase 12 Status
+
+COMPLETE
+
+## Key Outcome
+
+dbt successfully validated warehouse quality and identified a genuine source data issue that would otherwise remain undetected.
+
+## Next Phase
+
+PHASE 13 — AIRFLOW ORCHESTRATION
+
+Pipeline Flow:
+
+CSV / JSON
+↓
+PostgreSQL
+↓
+Parquet
+↓
+Snowflake RAW
+↓
+dbt Run
+↓
+dbt Test
+↓
+Power BI
+
+==================================================
+PHASE 13A — AIRFLOW INFRASTRUCTURE SETUP
+==================================================
+
+## Objective
+
+Build the Airflow environment required to orchestrate the entire data pipeline.
+
+## Purpose
+
+Before Airflow can automate workflows, the platform infrastructure must be configured and deployed.
+
+This phase establishes:
+
+* Airflow Docker image
+* Airflow scheduler
+* Airflow webserver
+* Airflow metadata database
+* Airflow administrator account
+
+## Architecture Before
+
+Docker
+
+└── PostgreSQL
+
+## Architecture After
+
+Docker
+
+├── PostgreSQL
+├── Airflow Scheduler
+├── Airflow Webserver
+└── Airflow Metadata Database
+
+## Pipeline Goal
+
+The final automated pipeline will execute:
+
+load_seed_data.py
+↓
+postgres_to_parquet.py
+↓
+snowflake_loader.py
+↓
+dbt run
+↓
+dbt test
+
+## Prerequisites
+
+✅ PostgreSQL
+
+✅ Snowflake
+
+✅ dbt
+
+✅ Docker
+
+## Step 1 - Create Airflow Docker Image
+
+File:
+
+docker/airflow/Dockerfile
+
+Purpose:
+
+Build a custom Airflow image capable of running:
+
+* Python scripts
+* Snowflake connectors
+* dbt commands
+
+Dockerfile:
+
+FROM apache/airflow:2.10.5
+
+USER root
+
+RUN apt-get update && apt-get install -y 
+git 
+gcc 
+g++ 
+&& apt-get clean
+
+USER airflow
+
+COPY requirements.txt /requirements.txt
+
+RUN pip install --no-cache-dir -r /requirements.txt
+
+Result:
+
+Custom Airflow image created for project execution.
+
+## Step 2 - Update Python Dependencies
+
+File:
+
+requirements.txt
+
+Final Version:
+
+pandas
+sqlalchemy
+psycopg2-binary
+pyarrow
+snowflake-connector-python
+snowflake-sqlalchemy
+dbt-core==1.11.11
+dbt-snowflake==1.11.5
+python-dotenv
+
+Important Change:
+
+Removed:
+
+apache-airflow
+
+Reason:
+
+The Airflow base image already includes Airflow.
+
+Keeping apache-airflow inside requirements.txt causes dependency conflicts and longer Docker build times.
+
+## Step 3 - Configure Docker Compose
+
+File:
+
+docker-compose.yml
+
+Services Created:
+
+1. PostgreSQL
+
+2. Airflow Initialization Service
+
+3. Airflow Webserver
+
+4. Airflow Scheduler
+
+Volumes:
+
+postgres_data
+
+airflow_data
+
+Purpose:
+
+Persist:
+
+* PostgreSQL data
+* Airflow metadata database
+* Airflow configuration
+
+## Step 4 - Create Airflow Initialization Service
+
+Service:
+
+airflow-init
+
+Purpose:
+
+Automatically perform:
+
+airflow db migrate
+
+and
+
+airflow users create
+
+during first-time deployment.
+
+Configuration:
+
+airflow-init:
+build:
+context: .
+dockerfile: docker/airflow/Dockerfile
+
+container_name: airflow_init
+
+depends_on:
+- postgres
+
+volumes:
+- ./dags:/opt/airflow/dags
+- ./:/opt/airflow/project
+- airflow_data:/opt/airflow
+
+command: >
+bash -c "
+airflow db migrate &&
+airflow users create
+--username admin
+--firstname Luqman
+--lastname Hakim
+--role Admin
+--email [admin@example.com](mailto:admin@example.com)
+--password admin
+"
+
+Purpose:
+
+Initialize Airflow metadata database and create administrator account.
+
+## Step 5 - Build Docker Images
+
+Command:
+
+docker compose build --no-cache
+
+Result:
+
+Successfully built:
+
+lending_analytics_platform-airflow-webserver
+
+lending_analytics_platform-airflow-scheduler
+
+## Step 6 - Initialize Airflow Database
+
+Command:
+
+docker compose up airflow-init
+
+Execution Result:
+
+Database migrating done!
+
+User "admin" created with role "Admin"
+
+airflow_init exited with code 0
+
+Result:
+
+✅ Metadata database created
+
+✅ Airflow administrator account created
+
+## Step 7 - Start Airflow Services
+
+Command:
+
+docker compose up -d
+
+Services Started:
+
+lending_postgres
+
+airflow_scheduler
+
+airflow_webserver
+
+Result:
+
+Airflow environment became operational.
+
+## Step 8 - Access Airflow User Interface
+
+URL:
+
+http://localhost:8080
+
+Login Credentials:
+
+Username:
+
+admin
+
+Password:
+
+admin
+
+Result:
+
+Successfully accessed Airflow UI.
+
+## Infrastructure Components
+
+PostgreSQL
+
+Purpose:
+
+Store source system data.
+
+Airflow Scheduler
+
+Purpose:
+
+Monitor DAGs and schedule workflow execution.
+
+Airflow Webserver
+
+Purpose:
+
+Provide browser-based workflow management interface.
+
+Airflow Metadata Database
+
+Purpose:
+
+Store:
+
+* DAG runs
+* Task status
+* Logs
+* User accounts
+* Scheduling information
+
+Airflow Administrator
+
+Purpose:
+
+Manage:
+
+* DAGs
+* Users
+* Task monitoring
+* Workflow execution
+
+## Deliverables
+
+✅ Custom Airflow Docker Image
+
+✅ Airflow Metadata Database
+
+✅ Airflow Administrator User
+
+✅ Airflow Scheduler
+
+✅ Airflow Webserver
+
+✅ Docker Compose Configuration
+
+✅ Airflow UI Access
+
+## Phase 13A Status
+
+COMPLETE
+
+## Next Phase
+
+PHASE 13B — AIRFLOW DAG DEVELOPMENT
+
+Workflow:
+
+load_seed_data
+↓
+extract_parquet
+↓
+load_snowflake
+↓
+dbt_run
+↓
+dbt_test
+
+Objective:
+
+Build and deploy the first production-ready orchestration workflow.

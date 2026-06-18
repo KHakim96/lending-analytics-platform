@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import pandas as pd
 import os
 import json
@@ -23,6 +23,16 @@ engine = create_engine(
 )
 
 print("Connected to Snowflake")
+
+# ----------------------------------
+# Reset Snowflake tables
+# ----------------------------------
+
+with engine.begin() as conn:
+    conn.execute(text("TRUNCATE TABLE RAW.LOANS"))
+    conn.execute(text("TRUNCATE TABLE RAW.PAYMENTS"))
+
+print("Snowflake tables truncated")
 
 # Load parquet files
 print("Loading loans parquet...")

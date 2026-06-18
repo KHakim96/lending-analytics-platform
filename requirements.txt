@@ -4,8 +4,6 @@ psycopg2-binary
 pyarrow
 snowflake-connector-python
 snowflake-sqlalchemy
-apache-airflow
-dbt-core
-dbt-snowflake
+dbt-core==1.11.11
+dbt-snowflake==1.11.5
 python-dotenv
-
